@@ -1,0 +1,144 @@
+---
+title: "deneme"
+output: html_document
+---
+
+```{r}
+#Libraries
+
+library(textreadr)
+library(rvest)
+library(dplyr)
+library(matrixStats)
+library(recommenderlab)
+
+```
+
+
+```{r}
+
+#Fetch article title, author and rating for 89
+url <- 'http://ekinsogut.pythonanywhere.com/articles/article/89'
+art <- read_html(url)
+
+title <- html_nodes(art,'.article_title')
+title <- html_text(title)
+
+username <- html_nodes(art,'.rating_author')
+username <- html_text(username)
+
+rating <- html_nodes(art,'.rating_content')
+rating <- html_text(rating)
+
+head(title)
+head(username)
+head(rating)
+```
+
+```{r}
+#Dataframe
+all <- data.frame(title,username,rating)
+head(all)
+```
+
+```{r}
+#Fetch all article data and making dataframe
+for (i in 90:98) {
+  
+  x <- toString(i)
+  
+  url <- 'http://ekinsogut.pythonanywhere.com/articles/article/'
+  
+  newUrl <- paste(url,x)
+  newUrlOK <- gsub(" ","",newUrl)
+  
+  print(newUrlOK)
+
+  art <- read_html(newUrlOK)
+  
+  title <- html_nodes(art,'.article_title')
+  title <- html_text(title)
+
+  username <- html_nodes(art,'.rating_author')
+  username <- html_text(username)
+
+  rating <- html_nodes(art,'.rating_content')
+  rating <- html_text(rating)
+  
+  art <- data.frame(title,username,rating)
+  
+  all <- full_join(all,art)
+}
+```
+```{r}
+View(all)
+```
+
+```{r}
+str(all)
+```
+
+```{r}
+#Conversion realRatingMatrix
+realRM <- as(all,"realRatingMatrix")
+str(realRM@data)
+```
+```{r}
+#Users who given rated over 3
+rating <- realRM[rowCounts(realRM)> 3]
+dim(rating)
+```
+```{r}
+#We normalize the data so that the average rating given by each user is 0.
+rating.n <- normalize(rating)
+rating.n.vector <- as.vector(rating@data)
+rating.n.vector <- rating.n.vector[rating.n.vector != 0]
+
+```
+```{r}
+eval_set <- evaluationScheme(data = rating , method = "split" , train = 0.8 , given = 8) #8 Users
+```
+```{r}
+#Splitting data into test and train sets
+eval_recommender <- Recommender(data = getData(eval_set, "train"), method = "IBCF" , parameter = NULL)
+item_to_recommend=2;
+item_to_recommend
+
+eval_prediction <- predict(object = eval_recommender , newdata = getData(eval_set, "known"), n = item_to_recommend , type = "ratings")
+eval_accuracy <- calcPredictionAccuracy(x = eval_prediction , data = getData(eval_set , "unknown"), byUser = TRUE)
+
+head(eval_accuracy)
+View(eval_accuracy)
+```
+```{r}
+#Result list
+as(eval_prediction, "list")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
